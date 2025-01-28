@@ -2,7 +2,7 @@
 
 ## What is it
 This is the LLM module of the modular w-AI-fu SDK.
-It is a standalone module able to operate by itself and communicate with any client applications via WebSocket.
+It is a standalone module able to operate and communicate alongside any client applications via WebSocket.
   
 The goal of this module is to integrate as many LLMs as possible into a single module.
 
