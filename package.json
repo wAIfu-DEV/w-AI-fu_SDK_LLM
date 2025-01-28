@@ -1,0 +1,16 @@
+{
+  "name": "w-ai-fu_sdk_llm",
+  "version": "1.0.0",
+  "description": "LLM module of the w-AI-fu AI Vtuber SDK",
+  "main": "index.ts",
+  "scripts": {
+    "test": "npx tsx index.ts"
+  },
+  "author": "w-AI-fu_DEV",
+  "license": "MIT",
+  "dependencies": {
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
