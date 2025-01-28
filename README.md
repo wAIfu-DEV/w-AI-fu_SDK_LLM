@@ -116,7 +116,7 @@ Generate stream chunk:
 }
 ```
 
-Generate response:
+Generate stream done:
 ```json
 {
     "type": "generate_stream_done",
