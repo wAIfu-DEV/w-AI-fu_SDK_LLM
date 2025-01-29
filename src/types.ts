@@ -3,7 +3,9 @@ export enum LLM_GEN_ERR {
     UNEXPECTED = "UNEXPECTED",
     AUTHORIZATION = "AUTHORIZATION",
     INVALID_PROMPT = "INVALID_PROMPT",
+    INVALID_MODEL = "INVALID_MODEL",
     TIMEOUT = "TIMEOUT",
+    INTERRUPT = "INTERRUPT",
 };
 
 export type LlmSyncResult = {
@@ -14,8 +16,8 @@ export type LlmSyncResult = {
 export type LlmMessage = {
     role: "function" | "tool" | "system" | "user" | "assistant";
     content: string;
-    name: string | undefined | null;
-};
+    name?: string | undefined
+}
 
 export type LlmStreamChunk = {
     done: boolean,

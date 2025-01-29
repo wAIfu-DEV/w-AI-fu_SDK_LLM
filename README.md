@@ -25,6 +25,7 @@ Load model:
 ```json
 {
     "type": "load",
+    "unique_request_id": "<id unique to request>",
     "llm": "openai" | "groq" | "novelai" | ...
 }
 ```
@@ -60,14 +61,16 @@ Generate:
 Interrupt:
 ```json
 {
-    "type": "interrupt"
+    "type": "interrupt",
+    "unique_request_id": "<id unique to request>",
 }
 ```
 
 Close module:
 ```json
 {
-    "type": "close"
+    "type": "close",
+    "unique_request_id": "<id unique to request>",
 }
 ```
 ---
@@ -76,6 +79,7 @@ Model load acknowledgment:
 ```json
 {
     "type": "load_ack",
+    "unique_request_id": "<id of initial request>",
     "llm": "openai" | "groq" | "novelai" | ...
 }
 ```
@@ -84,7 +88,10 @@ Model load done:
 ```json
 {
     "type": "load_done",
-    "llm": "openai" | "groq" | "novelai" | ...
+    "unique_request_id": "<id of initial request>",
+    "llm": "openai" | "groq" | "novelai" | ...,
+    "is_error": true | false,
+    "error": "SUCCESS" | "<error type>"
 }
 ```
 
@@ -101,8 +108,8 @@ Generate response:
 {
     "type": "generate_done",
     "unique_request_id": "<id of initial request>",
-    "is_error": false,
-    "error": 0 | <error code>,
+    "is_error": false | true,
+    "error": "SUCCESS" | "<error type>",
     "response": "llm response" | null
 }
 ```
@@ -112,7 +119,7 @@ Generate stream chunk:
 {
     "type": "generate_stream_chunk",
     "unique_request_id": "<id of initial request>",
-    "chunk": "streamed chunk"
+    "chunk": "<streamed chunk>"
 }
 ```
 
@@ -121,32 +128,37 @@ Generate stream done:
 {
     "type": "generate_stream_done",
     "unique_request_id": "<id of initial request>",
-    "is_error": false,
-    "error": 0 | <error code>
+    "is_error": false | true,
+    "error": "SUCCESS" | "<error type>"
 }
 ```
 
 Interrupt acknowledgment:
 ```json
 {
-    "type": "interrupt_ack"
+    "type": "interrupt_ack",
+    "unique_request_id": "<id of initial request>",
 }
 ```
 
 Close acknowledgment:
 ```json
 {
-    "type": "close_ack"
+    "type": "close_ack",
+    "unique_request_id": "<id of initial request>",
 }
 ```
 
+## Requirements
+NodeJS version >= v20.9.0 (v20.9.0 tested)
+Python 3.10 (if required by LLM implementation)
 
 ## TODO
 - [x] LLM Interface definition
-- [ ] IN/OUT Message protocol definition
-- [ ] Incoming socket messages handler
-- [ ] OpenAI LLM implementation
-- [ ] NovelAI LLM implementation
+- [x] IN/OUT Message protocol definition
+- [x] Incoming socket messages handler
+- [x] OpenAI LLM implementation
+- [x] NovelAI LLM implementation
 - [ ] Groq LLM implementation
 - [ ] DeepSeek LLM implementation
 - [ ] Eventual solution for local models (hugging face, ollama)

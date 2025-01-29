@@ -18,7 +18,7 @@ export interface LargeLanguageModel
      * Should return only after all dependencies are fully loaded and the LLM is
      * ready to handle a request.
      */
-    Init(): Promise<void>;
+    Init(loadRequest: Record<string, any>): Promise<LLM_GEN_ERR>;
 
     /**
      * Un-initializes the dependencies loaded during the call to Init.
@@ -66,4 +66,51 @@ export interface LargeLanguageModel
      * then the output (sync or streamed) should be cut off instead.
      */
     Interrupt(): Promise<void>;
+}
+
+export function VerifyInterfaceAdherence(llm: any, llmName: string): boolean
+{
+    if (llm.interruptNext == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field interruptNext.");
+        return false;
+    }
+
+    if (llm.Init == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field Init.");
+        return false;
+    }
+
+    if (llm.Free == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field Free.");
+        return false;
+    }
+
+    if (llm.Generate == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field Generate.");
+        return false;
+    }
+
+    if (llm.GenerateStream == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field GenerateStream.");
+        return false;
+    }
+
+    if (llm.Interrupt == undefined)
+    {
+        console.error("[ERROR] Implementation of LLM", llmName, "failed to pass interface check.");
+        console.error("[ERROR] Missing field Interrupt.");
+        return false;
+    }
+
+    return true;
 }

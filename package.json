@@ -4,7 +4,7 @@
   "description": "LLM module of the w-AI-fu AI Vtuber SDK",
   "main": "index.ts",
   "scripts": {
-    "test": "npx tsx index.ts"
+    "test": "node start_module.js 7562"
   },
   "author": "w-AI-fu_DEV",
   "license": "MIT",
@@ -12,5 +12,8 @@
     "@types/ws": "^8.5.14",
     "tsx": "^4.19.2",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "openai": "^4.80.1"
   }
 }
