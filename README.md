@@ -157,6 +157,8 @@ Python 3.10 (if required by LLM implementation)
 ## Simple Client Example
 
 ```typescript
+// Look at example_client.ts for an actual real-world example
+
 let ws = new WebSocket("ws://127.0.0.1:7562")
 
 ws.onmessage = (ev) => {
