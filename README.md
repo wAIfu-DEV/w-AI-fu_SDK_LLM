@@ -26,7 +26,9 @@ Load model:
 {
     "type": "load",
     "unique_request_id": "<id unique to request>",
-    "llm": "openai" | "groq" | "novelai" | ...
+    "llm": "openai" | "groq" | "novelai" | ...,
+    "api_key": "<api key>" (optional, useful for API llms),
+    "preload_model_id": "<model id>" (optional, useful for local llms)
 }
 ```
 Important: the load message may require a "api_key" field or other fields depending on the needs of the implementation.

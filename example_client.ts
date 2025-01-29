@@ -18,24 +18,29 @@ type TaggedPromise = {
     id: string
 }
 
-export type LlmMessage = {
+type LlmMessage = {
     role: "function" | "tool" | "system" | "user" | "assistant";
     content: string;
     name?: string | undefined
 }
 
-export type LlmStreamChunk = {
+type LlmStreamChunk = {
     done: boolean,
     chunk: string
 };
 
-export class LlmGenParams {
+class LlmGenParams {
     model_id: string = "";
     character_name: string = "";
     temperature: number = 1.0;
     max_output_length: number = 200;
     stop_tokens: string[] | number[] | undefined | null = ["\r", "\n"];
     timeout_ms: number | undefined | null = 60_000;
+}
+
+type LlmProviderLoadParams = {
+    api_key?: string;
+    preload_model_id?: string;
 }
 
 class wAIfuLlmClient
@@ -119,7 +124,7 @@ class wAIfuLlmClient
         }
     }
 
-    async loadModel(modelName: LlmModelName, apiKey?: string): Promise<void>
+    async loadProvider(modelName: LlmModelName, params: LlmProviderLoadParams): Promise<void>
     {
         // Generate unique ID
         let id = crypto.randomUUID();
@@ -134,7 +139,8 @@ class wAIfuLlmClient
             type: "load",
             unique_request_id: id,
             llm: modelName,
-            api_key: apiKey
+            api_key: params.api_key,
+            preload_model_id: params.preload_model_id
         }));
 
         // Race the promises (first to fulfill will return)
@@ -288,7 +294,9 @@ async function main()
 {
     let client = new wAIfuLlmClient();
 
-    await client.loadModel("openai", "<api key>");
+    await client.loadProvider("openai", {
+        api_key:  "<api key>"
+    });
 
     console.log("User: What is 9 + 10 equal to?");
 
