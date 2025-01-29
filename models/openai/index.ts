@@ -13,13 +13,13 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
         if (loadRequest["api_key"] == undefined)
         {
             console.error("[ERROR] Request to load openai model failed.");
-            console.error("[ERROR] Request object is missing field specific field \"api_key\"");
+            console.error("[ERROR] Request object is missing specific field \"api_key\"");
             console.error("[ERROR] Example:", {
                 type: "load",
                 llm: "openai",
                 api_key: "<api key>"
             });
-            process.exit(1);
+            return LLM_GEN_ERR.AUTHORIZATION;
         }
         
         this.#client = new OpenAI({

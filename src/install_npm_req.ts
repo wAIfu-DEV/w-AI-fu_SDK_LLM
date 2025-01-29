@@ -8,24 +8,27 @@ export async function InstallNpmRequirements(reqPath: string, llmName: string): 
     // Check for currently installed packages
     try
     {
-        var installedDepsResp = cproc.spawnSync("npm", ["list", "--depth=0", "--json"]);
+        var installedDepsResp = cproc.execSync("npm list --depth=0 --json", {
+            cwd: process.cwd()
+        });
     }
-    catch
+    catch(e)
     {
         console.error("[ERROR] Failed to get currently installed npm packages.");
+        console.error("[ERROR] Error:", e);
         process.exit(1);
     }
 
-    if (installedDepsResp.error)
+    if (!installedDepsResp)
     {
-        console.error("[ERROR] Error when trying to get currently installed npm packages.");
+        console.error("[ERROR] Could not read currently installed npm packages.");
         process.exit(1);
     }
 
     // Parse output json
     try
     {
-        var installedDepsJson = JSON.parse(installedDepsResp.stdout.toString("utf8"));
+        var installedDepsJson = JSON.parse(installedDepsResp.toString("utf8"));
     }
     catch
     {
@@ -70,18 +73,34 @@ export async function InstallNpmRequirements(reqPath: string, llmName: string): 
         let packageName = line.substring(0, atIdx);
         let packageVersion = line.substring(atIdx + 1);
 
+        packageName = packageName.replaceAll(/[\x00-\x1F\x7F;&|`$<>(){}[\]]/g, "");
+        packageVersion = packageVersion.replaceAll(/[\x00-\x1F\x7F;&|`$<>(){}[\]]/g, "");
+
         if (installedDeps.includes(packageName))
         {
             console.log(`[LOG] Npm package ${packageName} is already installed.`);
             continue;
         }
 
-        var installResp = cproc.spawnSync("npm", ["install", `${packageName}@${packageVersion}`, "--save-dev"]);
+        try
+        {
+            var installResp = cproc.execSync(`npm install ${packageName}@${packageVersion} --save-dev`);
+        }
+        catch (e)
+        {
+            console.error("[ERROR] Failed to install npm package:", packageName, packageVersion);
+            console.error("[ERROR] Error:", e);
+            process.exit(1);
+        }
         
-        if (installResp.error)
+        if (!installResp)
         {
             console.error("[ERROR] Error when trying to install npm package:", packageName, packageVersion);
             process.exit(1);
+        }
+        else
+        {
+            console.log("[LOG] Installed npm package:", packageName, packageVersion);
         }
     }
     console.log("[LOG] Finished handling npm dependencies for LLM:", llmName);

@@ -11,7 +11,7 @@ import { LLM_GEN_ERR } from "./types";
 export async function LoadModel(modelName: string, loadRequest: any): Promise<LLM_GEN_ERR>
 {
     // Check if model exists
-    const modelPath = path.join("models", modelName);
+    const modelPath = path.join(process.cwd(), "models", modelName);
 
     try
     {
@@ -37,7 +37,7 @@ export async function LoadModel(modelName: string, loadRequest: any): Promise<LL
         return LLM_GEN_ERR.UNEXPECTED;
     }
 
-    if (VerifyInterfaceAdherence(tempModel.Model, modelName))
+    if (!VerifyInterfaceAdherence(tempModel.Model, modelName))
     {
         console.error("[ERROR] Loaded model", modelName, "does not adhere to the LargeLanguageModel interface.");
         return LLM_GEN_ERR.UNEXPECTED;

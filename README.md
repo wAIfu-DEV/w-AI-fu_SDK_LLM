@@ -29,6 +29,7 @@ Load model:
     "llm": "openai" | "groq" | "novelai" | ...
 }
 ```
+Important: the load message may require a "api_key" field or other fields depending on the needs of the implementation.
 
 Generate:
 ```json

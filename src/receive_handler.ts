@@ -77,7 +77,7 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
             if (incomingMessage["llm"] == undefined)
             {
                 console.error("[ERROR] Incoming load message does not have the required field \"llm\".");
-                console.error("[ERROR] Example:", { type: "load", llm: "<model name>" });
+                console.error("[ERROR] Example:", { type: "load", unique_request_id: "<id>", llm: "<model name>" });
                 console.error("[ERROR] Refer to the README file for more information about load messages.");
                 return;
             }
