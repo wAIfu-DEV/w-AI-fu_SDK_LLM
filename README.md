@@ -154,57 +154,8 @@ Close acknowledgment:
 NodeJS version >= v20.9.0 (v20.9.0 tested)
 Python 3.10 (if required by LLM implementation)
 
-## Simple Client Example
-
-```typescript
-// Look at example_client.ts for an actual real-world example
-
-let ws = new WebSocket("ws://127.0.0.1:7562")
-
-ws.onmessage = (ev) => {
-    let message = JSON.parse(ev.data.toString())
-
-    switch(message.type)
-    {
-        case "load_done":
-            ws.send(JSON.stringify({
-                type: "generate",
-                unique_request_id: crypto.randomUUID(),
-                messages: [
-                    {
-                        "role": "system",
-                        "content": "This is a system prompt"
-                    },
-                    {
-                        "role": "user",
-                        "content": "erm",
-                        "name": "DEV"
-                    }
-                ],
-                params: {
-                    model_id: "gpt4o-mini",
-                    character_name: "Hilda",
-                    temperature: 1.0,
-                    max_output_length: 200,
-                    stop_tokens: ["\r", "\n"],
-                    timeout_ms: 10000
-                },
-                stream: false
-            }))
-            break
-        case "generate_done":
-            console.log("Response:", message.response)
-            break
-    }
-}
-
-ws.send(JSON.stringify({
-    type: "load",
-    unique_request_id: crypto.randomUUID(),
-    llm: "openai",
-    api_key: "<api key>"
-}))
-```
+## Client Example
+A client example is available in the example_client.ts file.
 
 ## TODO
 - [x] LLM Interface definition
