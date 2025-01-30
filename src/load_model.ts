@@ -8,10 +8,10 @@ import { LLM_GEN_ERR } from "./types";
 
 
 
-export async function LoadModel(modelName: string, loadRequest: any): Promise<LLM_GEN_ERR>
+export async function LoadProvider(modelProvider: string, loadRequest: any): Promise<LLM_GEN_ERR>
 {
     // Check if model exists
-    const modelPath = path.join(process.cwd(), "models", modelName);
+    const modelPath = path.join(process.cwd(), "providers", modelProvider);
 
     try
     {
@@ -19,27 +19,27 @@ export async function LoadModel(modelName: string, loadRequest: any): Promise<LL
     }
     catch(e)
     {
-        console.error("[ERROR] Failed to find model:", modelName);
-        return LLM_GEN_ERR.INVALID_MODEL;
+        console.error("[ERROR] Failed to find provider:", modelProvider);
+        return LLM_GEN_ERR.INVALID_PROVIDER;
     }
 
-    let tempModel = await LoadLlmScript(modelPath, modelName);
+    let tempModel = await LoadLlmScript(modelPath, modelProvider);
 
     if (!tempModel)
     {
-        console.error("[ERROR] Failed to load model:", modelName);
+        console.error("[ERROR] Failed to load provider:", modelProvider);
         return LLM_GEN_ERR.UNEXPECTED;
     }
 
     if (tempModel.Model == undefined)
     {
-        console.error("[ERROR] Index file of LLM", modelName, "does not export a \"Model\".");
+        console.error("[ERROR] Index file of provider", modelProvider, "does not export a field \"llm\" adhering to the LargeLanguageModel interface.");
         return LLM_GEN_ERR.UNEXPECTED;
     }
 
-    if (!VerifyInterfaceAdherence(tempModel.Model, modelName))
+    if (!VerifyInterfaceAdherence(tempModel.Model, modelProvider))
     {
-        console.error("[ERROR] Loaded model", modelName, "does not adhere to the LargeLanguageModel interface.");
+        console.error("[ERROR] Loaded provider", modelProvider, "does not adhere to the LargeLanguageModel interface.");
         return LLM_GEN_ERR.UNEXPECTED;
     }
 

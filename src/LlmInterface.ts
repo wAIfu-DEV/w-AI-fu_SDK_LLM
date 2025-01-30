@@ -66,6 +66,13 @@ export interface LargeLanguageModel
      * then the output (sync or streamed) should be cut off instead.
      */
     Interrupt(): Promise<void>;
+
+    /**
+     * Returns a list of model ids the user can use as a valid model_id field
+     * in a generate request.
+     * For example, valid models ids for openai would be: gpt4o, gpt4o-mini
+     */
+    GetModels(): Promise<string[]>;
 }
 
 export function VerifyInterfaceAdherence(llm: any, llmName: string): boolean

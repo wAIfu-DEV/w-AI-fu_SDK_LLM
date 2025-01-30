@@ -21,12 +21,12 @@ Python venvs everywhere.
 ## API Suggestion
 
 ### Input (from client application)
-Load model:
+Load provider:
 ```json
 {
     "type": "load",
     "unique_request_id": "<id unique to request>",
-    "llm": "openai" | "groq" | "novelai" | ...,
+    "provider": "openai" | "groq" | "novelai" | ...,
     "api_key": "<api key>" (optional, useful for API llms),
     "preload_model_id": "<model id>" (optional, useful for local llms)
 }
@@ -78,21 +78,21 @@ Close module:
 ```
 ---
 ### Output (from LLM module)
-Model load acknowledgment:
+Provider load acknowledgment:
 ```json
 {
     "type": "load_ack",
     "unique_request_id": "<id of initial request>",
-    "llm": "openai" | "groq" | "novelai" | ...
+    "provider": "openai" | "groq" | "novelai" | ...
 }
 ```
 
-Model load done:
+Provider load done:
 ```json
 {
     "type": "load_done",
     "unique_request_id": "<id of initial request>",
-    "llm": "openai" | "groq" | "novelai" | ...,
+    "provider": "openai" | "groq" | "novelai" | ...,
     "is_error": true | false,
     "error": "SUCCESS" | "<error type>"
 }

@@ -1,10 +1,10 @@
 import { LargeLanguageModel } from "../../src/LlmInterface"
 import { LLM_GEN_ERR, LlmGenParams, LlmMessage, LlmStreamChunk, LlmSyncResult } from "../../src/types";
 
-import { OpenAI } from "openai"
+import { Groq } from "groq-sdk"
 
-class LargeLanguageModelOpenai implements LargeLanguageModel {
-    #client?: OpenAI = undefined;
+class LargeLanguageModelGroq implements LargeLanguageModel {
+    #client?: Groq = undefined;
 
     interruptNext = false;
 
@@ -12,24 +12,24 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
         
         if (loadRequest["api_key"] == undefined)
         {
-            console.error("[ERROR] Request to load openai model failed.");
+            console.error("[ERROR] Request to load groq provider failed.");
             console.error("[ERROR] Request object is missing specific field \"api_key\"");
             console.error("[ERROR] Example:", {
                 type: "load",
-                llm: "openai",
+                provider: "groq",
                 api_key: "<api key>"
             });
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         
-        this.#client = new OpenAI({
+        this.#client = new Groq({
             apiKey: loadRequest["api_key"]
         });
 
         try {
             await this.#client.models.list();
         } catch (error) {
-            console.error("[ERROR] Test request to openai failed, assuming invalid API key.");
+            console.error("[ERROR] Test request to groq failed, assuming invalid API key.");
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         return LLM_GEN_ERR.SUCCESS;
@@ -37,8 +37,13 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
 
     async Free() {}
 
+    async GetModels(): Promise<string[]> {
+        let models = await this.#client!.models.list();
+        return models.data.map(v => v.id);
+    }
+
     Generate(messages: LlmMessage[],
-                   params: LlmGenParams): Promise<LlmSyncResult> {
+             params: LlmGenParams): Promise<LlmSyncResult> {
         
         this.interruptNext = false;
         return new Promise(async resolve => {
@@ -61,7 +66,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
             try
             {
                 var completion = await this.#client!.chat.completions.create({
-                    messages: messages as OpenAI.ChatCompletionMessageParam[],
+                    messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
                     stop: params.stop_tokens as string[] | undefined,
@@ -126,7 +131,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
 
             try {
                 var stream = await this.#client!.chat.completions.create({
-                    messages: messages as OpenAI.ChatCompletionMessageParam[],
+                    messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
                     stop: params.stop_tokens as string[] | undefined,
@@ -149,7 +154,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                 // refresh timeout
                 if (timeout)
                 {
-                    timeout = timeout.refresh()
+                    timeout = timeout.refresh();
                 }
 
                 await callback({
@@ -187,4 +192,4 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
     }
 }
 
-exports.Model = new LargeLanguageModelOpenai();
+exports.Model = new LargeLanguageModelGroq();

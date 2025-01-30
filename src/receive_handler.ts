@@ -1,6 +1,9 @@
+import * as fs from "fs/promises";
+import * as path from "path";
+
 import WebSocket from "ws";
 import { state } from "./global_state";
-import { LoadModel } from "./load_model";
+import { LoadProvider } from "./load_model";
 import { HandleGenerateRequest } from "./handle_generate";
 import { LLM_GEN_ERR } from "./types";
 
@@ -9,6 +12,8 @@ export enum ReceiveTypeEnum {
     GENERATE = "generate",
     INTERRUPT = "interrupt",
     CLOSE = "close",
+    GET_PROVIDERS = "get_providers",
+    GET_MODELS = "get_models"
 };
 
 type ReceiveType =`${ReceiveTypeEnum}`;
@@ -21,7 +26,7 @@ export type IncomingMessage = {
 type LoadMessage = {
     type: "load",
     unique_request_id: string,
-    llm: string
+    provider: string
 }
 
 export async function HandleReceivedMessage(socket: WebSocket , messageStr: string): Promise<void>
@@ -74,10 +79,10 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
         case ReceiveTypeEnum.LOAD: {
             console.warn("[LOG] Received load message.");
 
-            if (incomingMessage["llm"] == undefined)
+            if (incomingMessage["provider"] == undefined)
             {
-                console.error("[ERROR] Incoming load message does not have the required field \"llm\".");
-                console.error("[ERROR] Example:", { type: "load", unique_request_id: "<id>", llm: "<model name>" });
+                console.error("[ERROR] Incoming load message does not have the required field \"provider\".");
+                console.error("[ERROR] Example:", { type: "load", unique_request_id: "<id>", provider: "openai" });
                 console.error("[ERROR] Refer to the README file for more information about load messages.");
                 return;
             }
@@ -87,26 +92,26 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
             socket.send(JSON.stringify({
                 type: "load_ack",
                 unique_request_id: loadMessage.unique_request_id,
-                llm: loadMessage.llm
+                provider: loadMessage.provider
             }));
 
-            let error = await LoadModel(loadMessage.llm, loadMessage);
+            let error = await LoadProvider(loadMessage.provider, loadMessage);
 
             let isError = error != LLM_GEN_ERR.SUCCESS;
             if (isError)
             {
-                state.loadedModelName = undefined;
+                state.loadedProviderName = undefined;
                 state.largeLanguageModel = undefined;
             }
             else
             {
-                console.log("[LOG] Successfully loaded model:", loadMessage.llm);
+                console.log("[LOG] Successfully loaded provider:", loadMessage.provider);
             }
 
             socket.send(JSON.stringify({
                 type: "load_done",
                 unique_request_id: loadMessage.unique_request_id,
-                llm: loadMessage.llm,
+                provider: loadMessage.provider,
                 is_error: isError,
                 error
             }));
@@ -133,7 +138,7 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
             
             if (state.largeLanguageModel == undefined)
             {
-                console.error("[ERROR] Cannot interrupt, no model is currently loaded.");
+                console.error("[ERROR] Cannot interrupt, no provider is currently loaded.");
                 return;
             }
             
@@ -143,6 +148,36 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
         case ReceiveTypeEnum.GENERATE: {
             console.warn("[LOG] Received generate message.");
             await HandleGenerateRequest(socket, incomingMessage);
+            return;
+        }
+        case ReceiveTypeEnum.GET_PROVIDERS: {
+            console.warn("[LOG] Received \"get providers\" message.");
+            let providers = await fs.readdir(path.join(process.cwd(), "providers"));
+            socket.send(JSON.stringify({
+                type: "get_providers_done",
+                unique_request_id: incomingMessage.unique_request_id,
+                providers
+            }));
+            return;
+        }
+        case ReceiveTypeEnum.GET_MODELS: {
+            console.warn("[LOG] Received \"get models\" message.");
+            let models: string[] = [];
+
+            if (state.largeLanguageModel == undefined)
+            {
+                console.error("[ERROR] Cannot get models, no provider is currently loaded.");
+            }
+            else
+            {
+                models = await state.largeLanguageModel.GetModels();
+            }
+
+            socket.send(JSON.stringify({
+                type: "get_models_done",
+                unique_request_id: incomingMessage.unique_request_id,
+                models
+            }));
             return;
         }
         default: {

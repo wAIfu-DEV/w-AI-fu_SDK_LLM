@@ -1,4 +1,9 @@
-type MessageInType = "load" | "generate" | "interrupt" | "close";
+type MessageInType = "load"
+                     | "generate"
+                     | "interrupt"
+                     | "close"
+                     | "get_providers"
+                     | "get_models";
 
 type MessageOutType = "load_ack"
                       | "generate_ack"
@@ -9,8 +14,10 @@ type MessageOutType = "load_ack"
                       | "generate_streamed"
                       | "generate_stream_done"
                       | "generate_stream_chunk"
+                      | "get_providers_done"
+                      | "get_models_done"
 
-type LlmModelName = "openai" | "novelai";
+type LlmProviderName = "openai" | "novelai" | "groq";
 
 type TaggedPromise = {
     promise: Promise<any>,
@@ -59,7 +66,9 @@ class wAIfuLlmClient
         generate_done: {},
         generate_stream_chunk: {},
         generate_stream_done: {},
-        generate_streamed: {}
+        generate_streamed: {},
+        get_models_done: {},
+        get_providers_done: {}
     }
 
     // Promises are one-time use, so for the streaming we use a callback instead
@@ -125,7 +134,7 @@ class wAIfuLlmClient
         }
     }
 
-    async loadProvider(modelName: LlmModelName, params: LlmProviderLoadParams): Promise<void>
+    async loadProvider(providerName: LlmProviderName, params: LlmProviderLoadParams): Promise<void>
     {
         // Generate unique ID
         let id = crypto.randomUUID();
@@ -139,7 +148,7 @@ class wAIfuLlmClient
         this.socket.send(JSON.stringify({
             type: "load",
             unique_request_id: id,
-            llm: modelName,
+            provider: providerName,
             api_key: params.api_key,
             preload_model_id: params.preload_model_id
         }));
@@ -289,6 +298,60 @@ class wAIfuLlmClient
         // Race the promises (first to fulfill will return)
         await Promise.race([timeoutPromise, acknowledgementPromise]);
     }
+
+    async getProviders(): Promise<string[]>
+    {
+        // Generate unique ID
+        let id = crypto.randomUUID();
+
+        // Create acknowledgement timeout and listeners
+        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let acknowledgementPromise = this.listenTo("get_providers_done", id);
+
+        // Send request to module
+        this.socket.send(JSON.stringify({
+            type: "get_providers",
+            unique_request_id: id
+        }));
+
+        // Race the promises (first to fulfill will return)
+        let raceResult = await Promise.race([timeoutPromise, acknowledgementPromise]);
+
+        // If timeout promise fulfilled first
+        if (raceResult == undefined)
+        {
+            throw Error("interrupt timed out, LLM module may be closed.");
+        }
+
+        return raceResult.providers;
+    }
+
+    async getModels(): Promise<string[]>
+    {
+        // Generate unique ID
+        let id = crypto.randomUUID();
+
+        // Create acknowledgement timeout and listeners
+        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let acknowledgementPromise = this.listenTo("get_models_done", id);
+
+        // Send request to module
+        this.socket.send(JSON.stringify({
+            type: "get_models",
+            unique_request_id: id
+        }));
+
+        // Race the promises (first to fulfill will return)
+        let raceResult = await Promise.race([timeoutPromise, acknowledgementPromise]);
+
+        // If timeout promise fulfilled first
+        if (raceResult == undefined)
+        {
+            throw Error("interrupt timed out, LLM module may be closed.");
+        }
+
+        return raceResult.providers;
+    }
 }
 
 async function main()
@@ -318,4 +381,4 @@ async function main()
     console.log("AI:", response);
 }
 
-main();
+setImmediate(main);

@@ -1,10 +1,10 @@
 import { LargeLanguageModel } from "../../src/LlmInterface"
 import { LLM_GEN_ERR, LlmGenParams, LlmMessage, LlmStreamChunk, LlmSyncResult } from "../../src/types";
 
-import { Groq } from "groq-sdk"
+import { NovelAI, NovelAiTextModel, availableModels } from "./novelai"
 
-class LargeLanguageModelGroq implements LargeLanguageModel {
-    #client?: Groq = undefined;
+class LargeLanguageModelNovelAI implements LargeLanguageModel {
+    #client?: NovelAI = undefined;
 
     interruptNext = false;
 
@@ -12,24 +12,26 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
         
         if (loadRequest["api_key"] == undefined)
         {
-            console.error("[ERROR] Request to load groq model failed.");
+            console.error("[ERROR] Request to load novelai provider failed.");
             console.error("[ERROR] Request object is missing specific field \"api_key\"");
             console.error("[ERROR] Example:", {
                 type: "load",
-                llm: "groq",
+                provider: "novelai",
                 api_key: "<api key>"
             });
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         
-        this.#client = new Groq({
+        this.#client = new NovelAI({
             apiKey: loadRequest["api_key"]
         });
 
         try {
-            await this.#client.models.list();
+            await this.#client.generateText("", "llama-3-erato-v1", {
+                max_length: 10,
+            });
         } catch (error) {
-            console.error("[ERROR] Test request to groq failed, assuming invalid API key.");
+            console.error("[ERROR] Test request to novelai failed, assuming invalid API key.");
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         return LLM_GEN_ERR.SUCCESS;
@@ -37,8 +39,12 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
 
     async Free() {}
 
+    async GetModels(): Promise<string[]> {
+        return availableModels;
+    }
+
     Generate(messages: LlmMessage[],
-                   params: LlmGenParams): Promise<LlmSyncResult> {
+             params: LlmGenParams): Promise<LlmSyncResult> {
         
         this.interruptNext = false;
         return new Promise(async resolve => {
@@ -58,15 +64,27 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                 }, params.timeout_ms)
             }
 
-            try
+            if (availableModels.includes(params.model_id))
             {
-                var completion = await this.#client!.chat.completions.create({
-                    messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
-                    model: params.model_id,
-                    temperature: params.temperature,
-                    stop: params.stop_tokens as string[] | undefined,
-                    stream: false,
+                finished = true;
+                console.error("[ERROR] Generate error, model_id is not a valid NovelAI model.");
+                console.error("[ERROR] Valid NovelAI model:", availableModels.join(", "));
+                resolve({
+                    error: LLM_GEN_ERR.INVALID_MODEL,
+                    maybeValue: "",
                 });
+                return;
+            }
+
+            try {
+                var response = await this.#client!.generateChat(
+                    messages,
+                    params.model_id as NovelAiTextModel,
+                    {
+                        assistantName: params.character_name,
+                        systemPrompt: "",
+                    }
+                );
             }
             catch (e)
             {
@@ -75,7 +93,7 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                 console.error("[ERROR] Error:", e);
                 resolve({
                     error: LLM_GEN_ERR.UNEXPECTED,
-                    maybeValue: ""
+                    maybeValue: "",
                 });
                 return;
             }
@@ -99,15 +117,15 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
 
             resolve({
                 error: LLM_GEN_ERR.SUCCESS,
-                maybeValue: completion.choices[0].message.content ?? "",
+                maybeValue: response,
             });
             return;
         });
     }
 
     GenerateStream(messages: LlmMessage[],
-                         params: LlmGenParams,
-                         callback: (chunk: LlmStreamChunk) => any): Promise<LLM_GEN_ERR> {
+                   params: LlmGenParams,
+                   callback: (chunk: LlmStreamChunk) => any): Promise<LLM_GEN_ERR> {
         
         this.interruptNext = false;
         return new Promise(async resolve => {
@@ -124,38 +142,47 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                 }, params.timeout_ms)
             }
 
-            try {
-                var stream = await this.#client!.chat.completions.create({
-                    messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
-                    model: params.model_id,
-                    temperature: params.temperature,
-                    stop: params.stop_tokens as string[] | undefined,
-                    stream: true,
-                });
+            if (availableModels.includes(params.model_id))
+            {
+                finished = true;
+                console.error("[ERROR] GenerateStream error, model_id is not a valid NovelAI model.");
+                console.error("[ERROR] Valid NovelAI model:", availableModels.join(", "));
+                resolve(LLM_GEN_ERR.INVALID_MODEL);
+                return;
             }
-            catch(e)
+
+            try {
+                await this.#client!.generateChatStreamed(
+                    messages,
+                    params.model_id as NovelAiTextModel,
+                    {
+                        assistantName: params.character_name,
+                        systemPrompt: "",
+                    },
+                    async (chunk) => {
+                        if (finished) return;
+                        if (this.interruptNext) return;
+
+                        // refresh timeout
+                        if (timeout)
+                        {
+                            timeout = timeout.refresh()
+                        }
+
+                        await callback({
+                            done: false,
+                            chunk: chunk,
+                        });
+                    }
+                );
+            }
+            catch (e)
             {
                 finished = true;
                 console.error("[ERROR] Unexpected GenerateStream error.");
                 console.error("[ERROR] Error:", e);
                 resolve(LLM_GEN_ERR.UNEXPECTED);
                 return;
-            }
-
-            for await (let chunk of stream) {
-                if (finished) break;
-                if (this.interruptNext) break;
-
-                // refresh timeout
-                if (timeout)
-                {
-                    timeout = timeout.refresh();
-                }
-
-                await callback({
-                    done: false,
-                    chunk: chunk.choices[0]?.delta?.content ?? "",
-                });
             }
 
             await callback({
@@ -187,4 +214,4 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
     }
 }
 
-exports.Model = new LargeLanguageModelGroq();
+exports.Model = new LargeLanguageModelNovelAI();
