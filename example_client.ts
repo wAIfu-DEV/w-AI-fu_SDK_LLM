@@ -22,9 +22,63 @@ type MessageOutType = "load_ack"
 
 type LlmProviderName = "openai" | "novelai" | "groq";
 
-type TaggedPromise = {
-    promise: Promise<any>,
-    resolve: (arg0: any) => any,
+type OutDataBase = {
+    type: MessageOutType,
+    unique_request_id: string,
+}
+
+type LoadDoneResponse = OutDataBase & {
+    type: "load_done";
+    provider: string
+    is_error: boolean;
+    error: string;
+}
+
+type GenerateDoneResponse = OutDataBase & {
+    type: "generate_done"
+    is_error: boolean;
+    error: string;
+    response: string;
+}
+
+type StreamChunkResponse = OutDataBase & {
+    type: "generate_stream_chunk"
+    chunk: string;
+}
+
+type StreamDoneResponse = OutDataBase & {
+    type: "generate_stream_done"
+    is_error: boolean;
+    error: string;
+}
+
+type GetProvidersDoneResponse = OutDataBase & {
+    type: "get_providers_done"
+    providers: string[];
+}
+
+type GetModelsDoneResponse = OutDataBase & {
+    type: "get_models_done"
+    models: string[];
+}
+
+type MessageTypeMap = {
+    'load_ack': OutDataBase;
+    'generate_ack': OutDataBase;
+    'interrupt_ack': OutDataBase;
+    'close_ack': OutDataBase;
+    'load_done': LoadDoneResponse;
+    'generate_done': GenerateDoneResponse;
+    'generate_streamed': GenerateDoneResponse;
+    'generate_stream_chunk': StreamChunkResponse;
+    'generate_stream_done': StreamDoneResponse;
+    'get_providers_done': GetProvidersDoneResponse;
+    'get_models_done': GetModelsDoneResponse;
+}
+
+type TaggedPromise<T> = {
+    promise: Promise<T>,
+    resolve: (arg0: T) => any,
     id: string
 }
 
@@ -64,7 +118,9 @@ class wAIfuLlmClient
 
     // Collection of listeners for each message types
     // Allows us to await the reception of message data
-    listeners: Record<MessageOutType, Record<string, TaggedPromise>> = {
+    listeners: {
+        [K in MessageOutType]: Record<string, TaggedPromise<MessageTypeMap[K]>>
+    } = {
         load_ack: {},
         close_ack: {},
         interrupt_ack: {},
@@ -125,7 +181,7 @@ class wAIfuLlmClient
         }
         else
         {
-            let promise: TaggedPromise | undefined = this.listeners[messageType][id];
+            let promise: TaggedPromise<OutDataBase> | undefined = this.listeners[messageType][id];
             
             if (promise != undefined)
             {
@@ -147,11 +203,11 @@ class wAIfuLlmClient
         this.emit(message.type, id, message);
     }
 
-    listenTo(messageType: MessageOutType, id: string): Promise<any>
+    listenTo<K extends MessageOutType, R = MessageTypeMap[K]>(messageType: K, id: string): Promise<R>
     {
-        let resolver!: (arg0: any) => any;
+        let resolver!: (arg0: R) => any;
 
-        let promise = new Promise(resolve => {
+        let promise = new Promise<R>(resolve => {
             resolver = resolve;
         });
 
@@ -159,8 +215,9 @@ class wAIfuLlmClient
             id,
             resolve: resolver,
             promise
-        }
+        };
 
+        // @ts-ignore
         this.listeners[messageType][id] = taggedPromise;
         return taggedPromise.promise;
     }
@@ -208,7 +265,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("load_ack", id);
         let donePromise = this.listenTo("load_done", id);
 
@@ -248,7 +305,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("generate_ack", id);
         let donePromise = this.listenTo("generate_done", id);
 
@@ -293,7 +350,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("generate_ack", id);
         let donePromise = this.listenTo("generate_stream_done", id);
         this.listenToStream(id, callback);
@@ -335,7 +392,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("interrupt_ack", id);
 
         // Send request to module
@@ -361,7 +418,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("close_ack", id);
 
         // Send request to module
@@ -372,6 +429,7 @@ class wAIfuLlmClient
 
         // Race the promises (first to fulfill will return)
         await Promise.race([timeoutPromise, acknowledgementPromise]);
+        // If timeout then module is likely already closed
     }
 
     async getProviders(): Promise<string[]>
@@ -380,7 +438,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("get_providers_done", id);
 
         // Send request to module
@@ -396,7 +454,7 @@ class wAIfuLlmClient
         if (raceResult == undefined)
         {
             this.removeAllListeners(id);
-            throw Error("interrupt timed out, LLM module may be closed.");
+            throw Error("getProviders timed out, LLM module may be closed.");
         }
 
         return raceResult.providers;
@@ -408,7 +466,7 @@ class wAIfuLlmClient
         let id = crypto.randomUUID();
 
         // Create acknowledgement timeout and listeners
-        let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
+        let timeoutPromise = new Promise<undefined>(res => setTimeout(res, 1_000));
         let acknowledgementPromise = this.listenTo("get_models_done", id);
 
         // Send request to module
@@ -424,10 +482,10 @@ class wAIfuLlmClient
         if (raceResult == undefined)
         {
             this.removeAllListeners(id);
-            throw Error("interrupt timed out, LLM module may be closed.");
+            throw Error("getModels timed out, LLM module may be closed.");
         }
 
-        return raceResult.providers;
+        return raceResult.models;
     }
 }
 
