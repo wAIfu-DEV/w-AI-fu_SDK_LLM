@@ -3,7 +3,7 @@ import * as path from "path";
 
 import WebSocket from "ws";
 import { state } from "./global_state";
-import { LoadProvider } from "./load_model";
+import { LoadProvider } from "./load_provider";
 import { HandleGenerateRequest } from "./handle_generate";
 import { LLM_GEN_ERR } from "./types";
 
@@ -56,6 +56,17 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
         return;
     }
 
+    let obj = {
+        ...message
+    };
+
+    if (obj["api_key"] != undefined)
+    {
+        obj["api_key"] = "hidden";
+    }
+
+    console.log("[LOG] Received:", obj);
+
     if (message["type"] == undefined)
     {
         console.error("[ERROR] Incoming message does not have the required field \"type\".");
@@ -106,6 +117,7 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
             else
             {
                 console.log("[LOG] Successfully loaded provider:", loadMessage.provider);
+                state.loadedProviderName = loadMessage.provider;
             }
 
             socket.send(JSON.stringify({

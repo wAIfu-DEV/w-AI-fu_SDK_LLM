@@ -32,6 +32,7 @@ class LargeLanguageModelNovelAI implements LargeLanguageModel {
             });
         } catch (error) {
             console.error("[ERROR] Test request to novelai failed, assuming invalid API key.");
+            console.error("[ERROR] Actual error:", error);
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         return LLM_GEN_ERR.SUCCESS;

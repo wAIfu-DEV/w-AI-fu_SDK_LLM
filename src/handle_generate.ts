@@ -20,7 +20,7 @@ type GenerateMessage = {
 
 const exampleGenMessage: GenerateMessage = {
     type: "generate",
-    unique_request_id: "dzq534lku46qb1e+",
+    unique_request_id: crypto.randomUUID(),
     messages: [
         {
             role: "system",
@@ -33,8 +33,8 @@ const exampleGenMessage: GenerateMessage = {
         }
     ],
     params: {
-        model_id: "gpt4o-mini",
-        character_name: "Hilda",
+        model_id: "gpt-4o-mini",
+        character_name: "Mia",
         temperature: 1.0,
         max_output_length: 200,
         stop_tokens: ["\r", "\n"],
@@ -67,7 +67,7 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
 
     for (let requField of requiredFields)
     {
-        if (message[requField] == undefined)
+        if (message[requField] === undefined)
         {
             RequiredFieldError(requField);
             return;
@@ -87,7 +87,7 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
 
     for (let requParam of requiredParams)
     {
-        if (paramsObj[requParam] == undefined)
+        if (paramsObj[requParam] === undefined)
         {
             RequiredFieldError(`params"]["${requParam}`);
             return;

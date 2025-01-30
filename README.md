@@ -50,8 +50,8 @@ Generate:
         }
     ],
     "params": {
-        "model_id": "gpt4o-mini",
-        "character_name": "Hilda",
+        "model_id": "gpt-4o-mini",
+        "character_name": "Mia",
         "temperature": 1.0,
         "max_output_length": 200,
         "stop_tokens": ["\r", "\n"],
@@ -76,6 +76,23 @@ Close module:
     "unique_request_id": "<id unique to request>",
 }
 ```
+
+Get available providers:
+```json
+{
+    "type": "get_providers",
+    "unique_request_id": "<id unique to request>",
+}
+```
+
+Get available models from provider:
+```json
+{
+    "type": "get_models",
+    "unique_request_id": "<id unique to request>",
+}
+```
+This can only be done after a provider has already been loaded.
 ---
 ### Output (from LLM module)
 Provider load acknowledgment:

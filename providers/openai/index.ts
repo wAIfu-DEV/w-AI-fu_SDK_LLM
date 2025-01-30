@@ -27,9 +27,14 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
         });
 
         try {
-            await this.#client.models.list();
+            await this.#client.chat.completions.create({
+                messages: [{ role: "user", content: "respond with OK" }],
+                model: "gpt-4o-mini",
+                max_completion_tokens: 10,
+            });
         } catch (error) {
             console.error("[ERROR] Test request to openai failed, assuming invalid API key.");
+            console.error("[ERROR] Actual error:", error);
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         return LLM_GEN_ERR.SUCCESS;
@@ -69,6 +74,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                     messages: messages as OpenAI.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
+                    max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: false,
                 });
@@ -134,6 +140,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                     messages: messages as OpenAI.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
+                    max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: true,
                 });

@@ -30,6 +30,7 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
             await this.#client.models.list();
         } catch (error) {
             console.error("[ERROR] Test request to groq failed, assuming invalid API key.");
+            console.error("[ERROR] Actual error:", error);
             return LLM_GEN_ERR.AUTHORIZATION;
         }
         return LLM_GEN_ERR.SUCCESS;
@@ -69,6 +70,7 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                     messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
+                    max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: false,
                 });
@@ -134,6 +136,7 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                     messages: messages as Groq.Chat.Completions.ChatCompletionMessageParam[],
                     model: params.model_id,
                     temperature: params.temperature,
+                    max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: true,
                 });

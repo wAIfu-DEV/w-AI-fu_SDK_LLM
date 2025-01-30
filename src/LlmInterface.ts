@@ -70,7 +70,7 @@ export interface LargeLanguageModel
     /**
      * Returns a list of model ids the user can use as a valid model_id field
      * in a generate request.
-     * For example, valid models ids for openai would be: gpt4o, gpt4o-mini
+     * For example, valid models ids for openai would be: gpt-4o, gpt-4o-mini
      */
     GetModels(): Promise<string[]>;
 }
