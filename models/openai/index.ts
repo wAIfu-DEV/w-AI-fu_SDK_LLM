@@ -50,7 +50,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                 setTimeout(() => {
                     if (finished) return;
                     finished = true;
-                    console.error("[WARN] Generate timeout, request took longer than", params.timeout_ms, "ms.");
+                    console.error("[ERROR] Generate timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve({
                         error: LLM_GEN_ERR.TIMEOUT,
                         maybeValue: "",
@@ -71,8 +71,8 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
             catch (e)
             {
                 finished = true;
-                console.error("[WARN] Unexpected Generate error.");
-                console.error("[WARN] Error:", e);
+                console.error("[ERROR] Unexpected Generate error.");
+                console.error("[ERROR] Error:", e);
                 resolve({
                     error: LLM_GEN_ERR.UNEXPECTED,
                     maybeValue: ""
@@ -119,7 +119,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                 timeout = setTimeout(() => {
                     if (finished) return;
                     finished = true;
-                    console.error("[WARN] GenerateStream timeout, request took longer than", params.timeout_ms, "ms.");
+                    console.error("[ERROR] GenerateStream timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve(LLM_GEN_ERR.TIMEOUT);
                 }, params.timeout_ms)
             }
@@ -136,8 +136,8 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
             catch(e)
             {
                 finished = true;
-                console.error("[WARN] Unexpected GenerateStream error.");
-                console.error("[WARN] Error:", e);
+                console.error("[ERROR] Unexpected GenerateStream error.");
+                console.error("[ERROR] Error:", e);
                 resolve(LLM_GEN_ERR.UNEXPECTED);
                 return;
             }

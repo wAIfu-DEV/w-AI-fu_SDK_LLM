@@ -45,24 +45,29 @@ type LlmProviderLoadParams = {
 
 class wAIfuLlmClient
 {
+    // Client socket connected to the module
     socket: WebSocket;
 
-    listeners: Record<MessageOutType, TaggedPromise[]> = {
-        load_ack: [],
-        close_ack: [],
-        interrupt_ack: [],
-        generate_ack: [],
-        load_done: [],
-        generate_done: [],
-        generate_stream_chunk: [],
-        generate_stream_done: [],
-        generate_streamed: []
+    // Collection of listeners for each message types
+    // Allows us to await the reception of message data
+    listeners: Record<MessageOutType, Record<string, TaggedPromise>> = {
+        load_ack: {},
+        close_ack: {},
+        interrupt_ack: {},
+        generate_ack: {},
+        load_done: {},
+        generate_done: {},
+        generate_stream_chunk: {},
+        generate_stream_done: {},
+        generate_streamed: {}
     }
 
+    // Promises are one-time use, so for the streaming we use a callback instead
     streamListeners: Record<string, (chunk: string) => any> = {}
 
     constructor()
     {
+        // Connect to module
         this.socket = new WebSocket("ws://127.0.0.1:7562");
         this.socket.onmessage = this.incomingHandler.bind(this);
     }
@@ -75,39 +80,35 @@ class wAIfuLlmClient
         // Necessary edge case since promises are one-time use
         if (message.type == "generate_stream_chunk")
         {
-            this.streamListeners[id](message.chunk);
+            // If we have a callback set for a call to generate with stream:on
+            // We call it for each chunk we receive.
+            // Here the id ensures we are sending the data to the right callback
+            let callback = this.streamListeners[id];
+            if (callback != undefined) callback(message.chunk);
         }
         else
         {
-            let promises: TaggedPromise[] = this.listeners[message.type];
-        
-            for (let i = 0; i < promises.length; ++i)
-            {
-                let promise = promises[i];
-
-                if (promise.id == id)
-                {
-                    promise.resolve(message);
-                    promises.splice(i, 1);
-                    break;
-                }
-            }
+            let promise: TaggedPromise = this.listeners[message.type][id];
+            promise.resolve(message);
+            delete this.listeners[message.type][id];
         }
     }
 
     listenTo(messageType: MessageOutType, id: string): Promise<any>
     {
-        let resolver = (_) => {};
+        let resolver!: (arg0: any) => any;
+
+        let promise = new Promise(resolve => {
+            resolver = resolve;
+        });
 
         let taggedPromise = {
             id,
             resolve: resolver,
-            promise: new Promise(resolve => {
-                resolver = resolve;
-            })
+            promise
         }
 
-        this.listeners[messageType].push(taggedPromise);
+        this.listeners[messageType][id] = taggedPromise;
         return taggedPromise.promise;
     }
 
@@ -149,7 +150,7 @@ class wAIfuLlmClient
         // If timeout promise fulfilled first
         if (raceResult == undefined)
         {
-            throw Error("loadModel timed out, LLM module may be closed.");
+            throw Error("loadProvider timed out, LLM module may be closed.");
         }
 
         // Wait for response of module
@@ -158,7 +159,7 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to load model. Error:" + doneMessage.error);
+            throw Error("Failed to load provider. Error:" + doneMessage.error);
         }
         return;
     }
@@ -197,7 +198,7 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to load model. Error:" + doneMessage.error);
+            throw Error("Failed to generate response. Error:" + doneMessage.error);
         }
         return doneMessage.response;
     }
@@ -240,7 +241,7 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to load model. Error:" + doneMessage.error);
+            throw Error("Failed to stream response. Error:" + doneMessage.error);
         }
         return;
     }
@@ -277,11 +278,11 @@ class wAIfuLlmClient
 
         // Create acknowledgement timeout and listeners
         let timeoutPromise = new Promise(res => setTimeout(res, 1_000));
-        let acknowledgementPromise = this.listenTo("interrupt_ack", id);
+        let acknowledgementPromise = this.listenTo("close_ack", id);
 
         // Send request to module
         this.socket.send(JSON.stringify({
-            type: "interrupt",
+            type: "close",
             unique_request_id: id
         }));
 

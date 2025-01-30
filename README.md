@@ -165,6 +165,6 @@ A client example is available in the example_client.ts file.
 - [x] Incoming socket messages handler
 - [x] OpenAI LLM implementation
 - [x] NovelAI LLM implementation
-- [ ] Groq LLM implementation
+- [x] Groq LLM implementation
 - [ ] DeepSeek LLM implementation
 - [ ] Eventual solution for local models (hugging face, ollama)
