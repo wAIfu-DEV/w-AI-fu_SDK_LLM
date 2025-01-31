@@ -213,7 +213,7 @@ export class NovelAI
     {
         if (options.apiKey)
         {
-            this.#apiKey = options.apiKey
+            this.#apiKey = options.apiKey;
         }
         else
         {
@@ -236,8 +236,6 @@ export class NovelAI
     {
         let chatBuilder = new ChatPromptBuilder(options);
         let prompt = chatBuilder.build(messages);
-
-        console.log(prompt);
     
         let resp = await this.generateText(prompt, model, {
             stop_sequences: chatStopSequences,
@@ -253,8 +251,6 @@ export class NovelAI
     {
         let chatBuilder = new ChatPromptBuilder(options);
         let prompt = chatBuilder.build(messages);
-
-        console.log(prompt);
     
         await this.generateTextStreamed(prompt, model, {
             stop_sequences: chatStopSequences,
@@ -262,7 +258,7 @@ export class NovelAI
             bracket_ban: false,
             max_length: 250
         }, async(chunk) => {
-            await callback(chunk.replace(/<\|.*\|>/g, "").replace(/<\|.*\|/g, ""))
+            await callback(chunk.replaceAll(/<\|.*\|>/g, "").replaceAll(/<\|.*\|/g, "").replaceAll(/<\|\w*/g, ""))
         });
     }
 
@@ -287,14 +283,42 @@ export class NovelAI
             }, 
             body: JSON.stringify({ input, model, parameters })
         });
-        let respJson = await resp.json();
+        let respText = await resp.text();
+
+        let respJson: any = {};
+        try
+        {
+            respJson = JSON.parse(respText);
+        }
+        catch{}
 
         if (!respJson.output)
         {
-            throw new NovelAiError("Failed to get valid response from NovelAI.")
+            throw new NovelAiError("Failed to get valid response from NovelAI.", {
+                cause: respText
+            })
         }
 
         return respJson.output;
+    }
+
+    #parseSseEvent(event: string)
+    {
+        /*
+            event: newToken
+            id: 192
+            data: {"token":" the","ptr":192,"final":false,"logprobs":{"chosen":[[[279],[-0.0011,0.0]]],"before":[[[279],[-0.0011,0.0]],[[264],[-7.0515,null]],[[198],[-9.05,null]],[[813],[-10.5009,null]],[[271],[-10.773,null]],[[832],[-11.7912,null]],[[14373],[-12.1158,null]],[[459],[-12.1696,null]],[[1022],[-12.2514,null]],[[1234],[-12.3947,null]]],"after":[[[279],[-0.0011,0.0]]]}}
+        */
+        let lines = event.split(/\r\n|\n/g);
+        if (lines[0] == "event: newToken")
+        {
+            let data = lines[2].replace("data: ", "");
+            let json = JSON.parse(data);
+            return {
+                token: json.token,
+                final: json.final
+            };
+        }
     }
 
     async generateTextStreamed(input: string, model: NovelAiTextModel = "llama-3-erato-v1", options: TextGenOptions | undefined = undefined, callback: (chunk: string) => any): Promise<void>
@@ -319,18 +343,19 @@ export class NovelAI
             body: JSON.stringify({ input, model, parameters })
         });
 
-        try {
-            let respJson = await resp.json();
-            throw new NovelAiError(respJson.toString());
-
-        } catch{}
-
         let reader = resp.body!.getReader();
 
         while (true) {
             let data = await reader!.read();
             if (data.done) break;
-            await callback(data.value.toString());
+
+            let dataStr = Buffer.from(data.value).toString("utf8");
+            let event = this.#parseSseEvent(dataStr);
+
+            if (!event) continue;
+            if (event.final) break;
+
+            await callback(event.token);
         }
         return;
     }

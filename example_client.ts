@@ -514,27 +514,38 @@ async function main(): Promise<void>
 {
     let client = new wAIfuLlmClient();
 
-    let stdinReader = readline.createInterface(process.stdin, process.stdout);
-    let apiKey = await stdinReader.question("[INPUT] OpenAI API Key: ");
+    let providers = await client.getProviders();
 
-    await client.loadProvider("openai", {
+    console.log("[LOG] Available providers:", providers);
+
+    let stdinReader = readline.createInterface(process.stdin, process.stdout);
+    let provider = (await stdinReader.question("[INPUT] Provider: ")) as LlmProviderName;
+    let apiKey = await stdinReader.question("[INPUT] API Key: ");
+
+    await client.loadProvider(provider, {
         api_key: apiKey
     });
 
-    console.log("[INP] User: What is 9 + 10 equal to?");
+    let models = await client.getModels();
+
+    console.log("[LOG] Available models:", models);
+
+    let model = await stdinReader.question("[INPUT] Model ID: ");
+
+    console.log("[INP] User: How are you feeling?");
 
     let response = await client.generate([
         {
             role: "user",
-            content: "What is 9 + 10 equal to?"
+            content: "How are you feeling?"
         }
     ], {
-        model_id: "gpt-4o-mini",
+        model_id: model,
         character_name: "AI",
         max_output_length: 250,
         temperature: 1.0,
         stop_tokens: null,
-        timeout_ms: 5_000,
+        timeout_ms: null,
     });
 
     console.log("[OUT] AI:", response);
@@ -548,12 +559,12 @@ async function main(): Promise<void>
             content: "Write me a very long story, as long as possible."
         }
     ], {
-        model_id: "gpt-4o-mini",
+        model_id: model,
         character_name: "AI",
         max_output_length: 500,
         temperature: 1.0,
         stop_tokens: null,
-        timeout_ms: 5_000,
+        timeout_ms: 15_000,
     }, (chunk: string) => {
         process.stdout.write(chunk);
     });

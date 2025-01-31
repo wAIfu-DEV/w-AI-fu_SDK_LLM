@@ -27,7 +27,7 @@ class LargeLanguageModelNovelAI implements LargeLanguageModel {
         });
 
         try {
-            await this.#client.generateText("", "llama-3-erato-v1", {
+            await this.#client.generateText("test", "llama-3-erato-v1", {
                 max_length: 10,
             });
         } catch (error) {
@@ -65,7 +65,7 @@ class LargeLanguageModelNovelAI implements LargeLanguageModel {
                 }, params.timeout_ms)
             }
 
-            if (availableModels.includes(params.model_id))
+            if (!availableModels.includes(params.model_id))
             {
                 finished = true;
                 console.error("[ERROR] Generate error, model_id is not a valid NovelAI model.");
@@ -143,7 +143,7 @@ class LargeLanguageModelNovelAI implements LargeLanguageModel {
                 }, params.timeout_ms)
             }
 
-            if (availableModels.includes(params.model_id))
+            if (!availableModels.includes(params.model_id))
             {
                 finished = true;
                 console.error("[ERROR] GenerateStream error, model_id is not a valid NovelAI model.");

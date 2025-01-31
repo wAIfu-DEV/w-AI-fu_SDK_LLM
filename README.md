@@ -25,9 +25,14 @@ A client example is available in the example_client.ts file.
 // from example_client.ts
 let client = new wAIfuLlmClient();
 
-let apiKey = await stdinReader.question("[INPUT] OpenAI API Key: ");
+let providers = await client.getProviders();
 
-await client.loadProvider("openai", {
+console.log("[LOG] Available providers:", providers);
+
+let provider = await stdinReader.question("[INPUT] Provider: ");
+let apiKey = await stdinReader.question("[INPUT] API Key: ");
+
+await client.loadProvider(provider, {
     api_key: apiKey
 });
 
@@ -293,7 +298,7 @@ export enum LLM_GEN_ERR {
 ```
 
 ## Requirements
-NodeJS version >= v20.9.0 (v20.9.0 tested)
+NodeJS version >= v20.9.0 (v20.9.0 tested)  
 Python 3.10 (if required by LLM implementation)
 
 ## TODO
@@ -304,4 +309,5 @@ Python 3.10 (if required by LLM implementation)
 - [x] NovelAI LLM implementation
 - [x] Groq LLM implementation
 - [ ] DeepSeek LLM implementation
+- [ ] Ollama LLMs implementation
 - [ ] Eventual solution for local models (hugging face, ollama)
