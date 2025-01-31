@@ -223,6 +223,21 @@ Close acknowledgment:
     "unique_request_id": "<id of initial request>",
 }
 ```
+  
+---
+### Error types
+```typescript
+export enum LLM_GEN_ERR {
+    SUCCESS = "SUCCESS",
+    UNEXPECTED = "UNEXPECTED",
+    AUTHORIZATION = "AUTHORIZATION",
+    INVALID_PROMPT = "INVALID_PROMPT",
+    INVALID_PROVIDER = "INVALID_PROVIDER",
+    INVALID_MODEL = "INVALID_MODEL",
+    TIMEOUT = "TIMEOUT",
+    INTERRUPT = "INTERRUPT",
+};
+```
 
 ## Requirements
 NodeJS version >= v20.9.0 (v20.9.0 tested)
