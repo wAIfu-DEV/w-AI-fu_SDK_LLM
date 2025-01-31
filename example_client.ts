@@ -19,7 +19,7 @@ type MessageInType = "load"
                      | "get_providers"
                      | "get_models";
 
-type MessageOutType = "load_ack"
+export type MessageOutType = "load_ack"
                       | "generate_ack"
                       | "interrupt_ack"
                       | "close_ack"
@@ -31,7 +31,9 @@ type MessageOutType = "load_ack"
                       | "get_providers_done"
                       | "get_models_done"
 
-type LlmProviderName = "openai" | "novelai" | "groq";
+let LlmProviderList = ["openai", "novelai", "groq"] as const;
+type LlmProviderListType = typeof LlmProviderList & string[];
+type LlmProviderName = typeof LlmProviderList[number];
 
 type OutDataBase = {
     type: MessageOutType,
@@ -40,7 +42,7 @@ type OutDataBase = {
 
 type LoadDoneResponse = OutDataBase & {
     type: "load_done";
-    provider: string
+    provider: LlmProviderName
     is_error: boolean;
     error: LLM_GEN_ERR;
 }
@@ -65,7 +67,7 @@ type StreamDoneResponse = OutDataBase & {
 
 type GetProvidersDoneResponse = OutDataBase & {
     type: "get_providers_done"
-    providers: string[];
+    providers: LlmProviderListType;
 }
 
 type GetModelsDoneResponse = OutDataBase & {
@@ -464,7 +466,7 @@ class wAIfuLlmClient
         // If timeout then module is likely already closed
     }
 
-    async getProviders(): Promise<string[]>
+    async getProviders(): Promise<LlmProviderListType>
     {
         // Generate unique ID
         let id = crypto.randomUUID();

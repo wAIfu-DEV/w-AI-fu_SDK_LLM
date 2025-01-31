@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { IncomingMessage } from "./receive_handler";
 import { LLM_GEN_ERR, LlmMessage, LlmStreamChunk } from "./types";
 import { state } from "./global_state";
+import { sendToClient } from "./typed_send";
 
 type GenerateMessage = {
     type: "generate",
@@ -96,11 +97,19 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
 
     let generateMessage = message as GenerateMessage;
 
+    if (generateMessage.messages.length == 0)
+    {
+        console.error(`[ERROR] Field \"messages\" in incoming generate message must be of length >0.`);
+        console.error("[ERROR] Example:", exampleGenMessage);
+        console.error("[ERROR] Refer to the README file for more information about generate messages.");
+        return;
+    }
+
     // Acknowledge generate request
-    socket.send(JSON.stringify({
+    sendToClient(socket, "generate_ack", {
         type: "generate_ack",
         unique_request_id: generateMessage.unique_request_id
-    }));
+    });
 
     if (generateMessage.stream)
     {
@@ -109,11 +118,11 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
             generateMessage.params,
             (chunk: LlmStreamChunk) => {
                 if (chunk.done) return;
-                socket.send(JSON.stringify({
+                sendToClient(socket, "generate_stream_chunk",{
                     type: "generate_stream_chunk",
                     unique_request_id: generateMessage.unique_request_id,
                     chunk: chunk.chunk
-                }));
+                });
             }
         );
 
@@ -124,12 +133,12 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
             console.error("[ERROR] Error type:", responseError);
         }
 
-        socket.send(JSON.stringify({
+        sendToClient(socket, "generate_stream_done",{
             type: "generate_stream_done",
             unique_request_id: generateMessage.unique_request_id,
             is_error: isError,
             error: responseError
-        }));
+        });
     }
     else
     {
@@ -145,12 +154,12 @@ export async function HandleGenerateRequest(socket: WebSocket, message: Incoming
             console.error("[ERROR] Error type:", response.error);
         }
 
-        socket.send(JSON.stringify({
+        sendToClient(socket, "generate_done",{
             type: "generate_done",
             unique_request_id: generateMessage.unique_request_id,
             is_error: isError,
             error: response.error,
             response: response.maybeValue
-        }));
+        });
     }
 }

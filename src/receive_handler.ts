@@ -5,7 +5,8 @@ import WebSocket from "ws";
 import { state } from "./global_state";
 import { LoadProvider } from "./load_provider";
 import { HandleGenerateRequest } from "./handle_generate";
-import { LLM_GEN_ERR } from "./types";
+import { LLM_GEN_ERR, LlmProviderList, LlmProviderName } from "./types";
+import { sendToClient } from "./typed_send";
 
 export enum ReceiveTypeEnum {
     LOAD = "load",
@@ -26,7 +27,7 @@ export type IncomingMessage = {
 type LoadMessage = {
     type: "load",
     unique_request_id: string,
-    provider: string
+    provider: LlmProviderName
 }
 
 export async function HandleReceivedMessage(socket: WebSocket , messageStr: string): Promise<void>
@@ -98,13 +99,21 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
                 return;
             }
 
+            if (!LlmProviderList.includes(incomingMessage["provider"]))
+            {
+                console.error("[ERROR] Incoming load message has invalid value in field \"provider\".");
+                console.error("[ERROR] Available providers:", LlmProviderList.join(", "));
+                console.error("[ERROR] Refer to the README file for more information about load messages.");
+                return;
+            }
+
             let loadMessage: LoadMessage = incomingMessage as LoadMessage;
 
-            socket.send(JSON.stringify({
+            sendToClient(socket, "load_ack", {
                 type: "load_ack",
                 unique_request_id: loadMessage.unique_request_id,
                 provider: loadMessage.provider
-            }));
+            });
 
             let error = await LoadProvider(loadMessage.provider, loadMessage);
 
@@ -120,22 +129,22 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
                 state.loadedProviderName = loadMessage.provider;
             }
 
-            socket.send(JSON.stringify({
+            sendToClient(socket, "load_done", {
                 type: "load_done",
                 unique_request_id: loadMessage.unique_request_id,
                 provider: loadMessage.provider,
                 is_error: isError,
                 error
-            }));
+            });
             return;
         }
         case ReceiveTypeEnum.CLOSE: {
             console.warn("[LOG] Received close message.");
 
-            socket.send(JSON.stringify({
+            sendToClient(socket, "close_ack", {
                 type: "close_ack",
                 unique_request_id: incomingMessage.unique_request_id
-            }));
+            });
 
             process.exit(0);
             return;
@@ -143,10 +152,10 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
         case ReceiveTypeEnum.INTERRUPT: {
             console.warn("[LOG] Received interrupt message.");
 
-            socket.send(JSON.stringify({
+            sendToClient(socket, "interrupt_ack",{
                 type: "interrupt_ack",
                 unique_request_id: incomingMessage.unique_request_id
-            }));
+            });
             
             if (state.largeLanguageModel == undefined)
             {
@@ -165,11 +174,12 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
         case ReceiveTypeEnum.GET_PROVIDERS: {
             console.warn("[LOG] Received \"get providers\" message.");
             let providers = await fs.readdir(path.join(process.cwd(), "providers"));
-            socket.send(JSON.stringify({
+            sendToClient(socket, "get_providers_done",{
                 type: "get_providers_done",
                 unique_request_id: incomingMessage.unique_request_id,
-                providers
-            }));
+                // TODO: better runtime type checking
+                providers: providers as any as typeof LlmProviderList
+            });
             return;
         }
         case ReceiveTypeEnum.GET_MODELS: {
@@ -185,11 +195,11 @@ export async function HandleReceivedMessage(socket: WebSocket , messageStr: stri
                 models = await state.largeLanguageModel.GetModels();
             }
 
-            socket.send(JSON.stringify({
+            sendToClient(socket, "get_models_done", {
                 type: "get_models_done",
                 unique_request_id: incomingMessage.unique_request_id,
                 models
-            }));
+            });
             return;
         }
         default: {

@@ -18,8 +18,61 @@ In simpler words, you only install what you use.
 ### No Conflicts
 Python venvs everywhere.
 
-## API Suggestion
+## Client Example
+A client example is available in the example_client.ts file.
 
+```typescript
+// from example_client.ts
+let client = new wAIfuLlmClient();
+
+let apiKey = await stdinReader.question("[INPUT] OpenAI API Key: ");
+
+await client.loadProvider("openai", {
+    api_key: apiKey
+});
+
+console.log("[INP] User: What is 9 + 10 equal to?");
+
+let response = await client.generate([
+    {
+        role: "user",
+        content: "What is 9 + 10 equal to?"
+    }
+], {
+    model_id: "gpt-4o-mini",
+    character_name: "AI",
+    max_output_length: 250,
+    temperature: 0.7,
+    stop_tokens: ["\n"],
+    timeout_ms: 5_000,
+});
+
+console.log("[OUT] AI:", response);
+
+console.log("[INP] User: Write me a very long story, as long as possible.");
+process.stdout.write("[OUT] AI: ");
+
+await client.generateStream([
+    {
+        role: "user",
+        content: "Write me a very long story, as long as possible."
+    }
+], {
+    model_id: "gpt-4o-mini",
+    character_name: "AI",
+    max_output_length: 750,
+    temperature: 1.3,
+    timeout_ms: 5_000,
+}, (chunk: string) => {
+    process.stdout.write(chunk);
+});
+// generateStream exits after last chunk is received
+
+process.stdout.write("\n");
+console.log("[LOG] Done.");
+```
+
+## WebSocket API
 ### Input (from client application)
 Load provider:
 ```js
@@ -27,7 +80,7 @@ Load provider:
     "type": "load",
     "unique_request_id": "<id unique to request>",
     "provider": "openai", // "groq" | "novelai" | ...,
-    "api_key": "<api key>", // (optional, useful for API llms),
+    "api_key": "<api key>", // (optional, required by API llms),
     "preload_model_id": "<model id>" // (optional, useful for local llms)
 }
 ```
@@ -46,7 +99,7 @@ Generate:
         {
             "role": "user",
             "content": "erm",
-            "name": "DEV" // or null
+            "name": "DEV" // or missing
         }
     ],
     "params": {
@@ -173,60 +226,6 @@ Close acknowledgment:
 ## Requirements
 NodeJS version >= v20.9.0 (v20.9.0 tested)
 Python 3.10 (if required by LLM implementation)
-
-## Client Example
-A client example is available in the example_client.ts file.
-
-```typescript
-// from example_client.ts
-let client = new wAIfuLlmClient();
-
-let apiKey = await stdinReader.question("[INPUT] OpenAI API Key: ");
-
-await client.loadProvider("openai", {
-    api_key: apiKey
-});
-
-console.log("[INP] User: What is 9 + 10 equal to?");
-
-let response = await client.generate([
-    {
-        role: "user",
-        content: "What is 9 + 10 equal to?"
-    }
-], {
-    model_id: "gpt-4o-mini",
-    character_name: "AI",
-    max_output_length: 250,
-    temperature: 0.7,
-    stop_tokens: ["\n"],
-    timeout_ms: 5_000,
-});
-
-console.log("[OUT] AI:", response);
-
-console.log("[INP] User: Write me a very long story, as long as possible.");
-process.stdout.write("[OUT] AI: ");
-
-await client.generateStream([
-    {
-        role: "user",
-        content: "Write me a very long story, as long as possible."
-    }
-], {
-    model_id: "gpt-4o-mini",
-    character_name: "AI",
-    max_output_length: 750,
-    temperature: 1.3,
-    timeout_ms: 5_000,
-}, (chunk: string) => {
-    process.stdout.write(chunk);
-});
-// generateStream exits after last chunk is received
-
-process.stdout.write("\n");
-console.log("[LOG] Done.");
-```
 
 ## TODO
 - [x] LLM Interface definition
