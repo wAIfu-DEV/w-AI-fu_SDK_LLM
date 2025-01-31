@@ -233,6 +233,24 @@ Close acknowledgment:
     "unique_request_id": "<id of initial request>",
 }
 ```
+
+Get providers done:
+```js
+{
+    "type": "get_providers_done",
+    "unique_request_id": "<id of initial request>",
+    "providers": ["<list of providers>"]
+}
+```
+
+Get models done:
+```js
+{
+    "type": "get_models_done",
+    "unique_request_id": "<id of initial request>",
+    "providers": ["<list of model ids>"]
+}
+```
   
 ---
 ### Error types
