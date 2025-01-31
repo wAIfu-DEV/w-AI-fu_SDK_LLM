@@ -1,6 +1,17 @@
 import * as readline from "readline/promises";
 import { WebSocket } from "ws";
 
+export enum LLM_GEN_ERR {
+    SUCCESS = "SUCCESS",
+    UNEXPECTED = "UNEXPECTED",
+    AUTHORIZATION = "AUTHORIZATION",
+    INVALID_PROMPT = "INVALID_PROMPT",
+    INVALID_PROVIDER = "INVALID_PROVIDER",
+    INVALID_MODEL = "INVALID_MODEL",
+    TIMEOUT = "TIMEOUT",
+    INTERRUPT = "INTERRUPT",
+};
+
 type MessageInType = "load"
                      | "generate"
                      | "interrupt"
@@ -31,13 +42,13 @@ type LoadDoneResponse = OutDataBase & {
     type: "load_done";
     provider: string
     is_error: boolean;
-    error: string;
+    error: LLM_GEN_ERR;
 }
 
 type GenerateDoneResponse = OutDataBase & {
     type: "generate_done"
     is_error: boolean;
-    error: string;
+    error: LLM_GEN_ERR;
     response: string;
 }
 
@@ -49,7 +60,7 @@ type StreamChunkResponse = OutDataBase & {
 type StreamDoneResponse = OutDataBase & {
     type: "generate_stream_done"
     is_error: boolean;
-    error: string;
+    error: LLM_GEN_ERR;
 }
 
 type GetProvidersDoneResponse = OutDataBase & {
@@ -62,18 +73,35 @@ type GetModelsDoneResponse = OutDataBase & {
     models: string[];
 }
 
-type MessageTypeMap = {
-    'load_ack': OutDataBase;
-    'generate_ack': OutDataBase;
-    'interrupt_ack': OutDataBase;
-    'close_ack': OutDataBase;
-    'load_done': LoadDoneResponse;
-    'generate_done': GenerateDoneResponse;
-    'generate_streamed': GenerateDoneResponse;
-    'generate_stream_chunk': StreamChunkResponse;
-    'generate_stream_done': StreamDoneResponse;
-    'get_providers_done': GetProvidersDoneResponse;
-    'get_models_done': GetModelsDoneResponse;
+type LoadAcknowledgement = OutDataBase & {
+    type: "load_ack",
+    provider: LlmProviderName
+}
+
+type GenerateAcknowledgement = OutDataBase & {
+    type: "generate_ack"
+}
+
+type InterruptAcknowledgement = OutDataBase & {
+    type: "interrupt_ack"
+}
+
+type CloseAcknowledgement = OutDataBase & {
+    type: "close_ack"
+}
+
+type MessageTypeMap =  {
+    load_ack: LoadAcknowledgement;
+    generate_ack: GenerateAcknowledgement;
+    interrupt_ack: InterruptAcknowledgement;
+    close_ack: CloseAcknowledgement;
+    load_done: LoadDoneResponse;
+    generate_done: GenerateDoneResponse;
+    generate_streamed: GenerateDoneResponse;
+    generate_stream_chunk: StreamChunkResponse;
+    generate_stream_done: StreamDoneResponse;
+    get_providers_done: GetProvidersDoneResponse;
+    get_models_done: GetModelsDoneResponse;
 }
 
 type TaggedPromise<T> = {
@@ -87,6 +115,9 @@ type LlmMessage = {
     content: string;
     name?: string | undefined
 }
+
+// Enforces a length of > 0
+type LlmMessages = [LlmMessage, ...LlmMessage[]]
 
 type LlmGenParams = {
     model_id: string;
@@ -191,7 +222,8 @@ class wAIfuLlmClient
             }
             else
             {
-                console.error("[ERROR] Received unhandled message:", data);
+                console.error("[ERROR] Received unhandled message from server:", data);
+                console.error("[ERROR] This might be due to an out-of-date client or module.");
             }
         }
     }
@@ -294,12 +326,12 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to load provider. Error:" + doneMessage.error);
+            throw Error("Failed to load provider. Error: " + doneMessage.error);
         }
         return;
     }
 
-    async generate(messages: LlmMessage[], params: LlmGenParams): Promise<string>
+    async generate(messages: LlmMessages, params: LlmGenParams): Promise<string>
     {
         // Generate unique ID
         let id = crypto.randomUUID();
@@ -339,12 +371,12 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to generate response. Error:" + doneMessage.error);
+            throw Error("Failed to generate response. Error: " + doneMessage.error);
         }
         return doneMessage.response;
     }
 
-    async generateStream(messages: LlmMessage[], params: LlmGenParams, callback: (chunk: string) => any): Promise<void>
+    async generateStream(messages: LlmMessages, params: LlmGenParams, callback: (chunk: string) => any): Promise<void>
     {
         // Generate unique ID
         let id = crypto.randomUUID();
@@ -381,7 +413,7 @@ class wAIfuLlmClient
         // Handle possible errors
         if (doneMessage.is_error)
         {
-            throw Error("Failed to stream response. Error:" + doneMessage.error);
+            throw Error("Failed to stream response. Error: " + doneMessage.error);
         }
         return;
     }
@@ -513,7 +545,7 @@ async function main(): Promise<void>
         max_output_length: 250,
         temperature: 1.0,
         stop_tokens: null,
-        timeout_ms: 20_000,
+        timeout_ms: 5_000,
     });
 
     console.log("[OUT] AI:", response);
@@ -532,7 +564,7 @@ async function main(): Promise<void>
         max_output_length: 500,
         temperature: 1.0,
         stop_tokens: null,
-        timeout_ms: 20_000,
+        timeout_ms: 5_000,
     }, (chunk: string) => {
         process.stdout.write(chunk);
     });

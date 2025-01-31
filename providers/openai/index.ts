@@ -3,13 +3,14 @@ import { LLM_GEN_ERR, LlmGenParams, LlmMessage, LlmStreamChunk, LlmSyncResult } 
 
 import { OpenAI } from "openai"
 
-class LargeLanguageModelOpenai implements LargeLanguageModel {
+class LargeLanguageModelOpenai implements LargeLanguageModel
+{
     #client?: OpenAI = undefined;
 
     interruptNext = false;
 
-    async Init(loadRequest: Record<string, any>): Promise<LLM_GEN_ERR> {
-        
+    async Init(loadRequest: Record<string, any>): Promise<LLM_GEN_ERR>
+    {
         if (loadRequest["api_key"] == undefined)
         {
             console.error("[ERROR] Request to load openai provider failed.");
@@ -42,24 +43,37 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
 
     async Free() {}
 
-    async GetModels(): Promise<string[]> {
-        let models = await this.#client!.models.list();
-        return models.data.map(v => v.id);
+    async GetModels(): Promise<string[]>
+    {
+        try
+        {
+            let models = await this.#client!.models.list();
+            return models.data.map(v => v.id);
+        }
+        catch(error)
+        {
+            console.error("[ERROR] Failed to fetch models from openai, this may be due to insufficient permissions for API key.");
+            console.error("[ERROR] Actual error:", error);
+            return [];
+        }
     }
 
     Generate(messages: LlmMessage[],
-                   params: LlmGenParams): Promise<LlmSyncResult> {
-        
+             params: LlmGenParams): Promise<LlmSyncResult>
+    {
         this.interruptNext = false;
         return new Promise(async resolve => {
             let finished: boolean = false;
             let timeout: NodeJS.Timeout | undefined = undefined;
+
+            let abortController = new AbortController();
 
             if (params.timeout_ms)
             {
                 setTimeout(() => {
                     if (finished) return;
                     finished = true;
+                    abortController.abort();
                     console.error("[ERROR] Generate timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve({
                         error: LLM_GEN_ERR.TIMEOUT,
@@ -77,10 +91,13 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                     max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: false,
+                }, {
+                    signal: abortController.signal
                 });
             }
             catch (e)
             {
+                if (finished) return;
                 finished = true;
                 console.error("[ERROR] Unexpected Generate error.");
                 console.error("[ERROR] Error:", e);
@@ -117,19 +134,22 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
     }
 
     GenerateStream(messages: LlmMessage[],
-                         params: LlmGenParams,
-                         callback: (chunk: LlmStreamChunk) => any): Promise<LLM_GEN_ERR> {
-        
+                   params: LlmGenParams,
+                   callback: (chunk: LlmStreamChunk) => any): Promise<LLM_GEN_ERR>
+    {
         this.interruptNext = false;
         return new Promise(async resolve => {
             let finished: boolean = false;
             let timeout: NodeJS.Timeout | undefined = undefined;
+
+            let abortController: AbortController | undefined = undefined;
 
             if (params.timeout_ms)
             {
                 timeout = setTimeout(() => {
                     if (finished) return;
                     finished = true;
+                    if (abortController) abortController.abort();
                     console.error("[ERROR] GenerateStream timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve(LLM_GEN_ERR.TIMEOUT);
                 }, params.timeout_ms)
@@ -147,6 +167,7 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
             }
             catch(e)
             {
+                if (finished) return;
                 finished = true;
                 console.error("[ERROR] Unexpected GenerateStream error.");
                 console.error("[ERROR] Error:", e);
@@ -154,9 +175,14 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
                 return;
             }
 
+            abortController = stream.controller;
+
             for await (let chunk of stream) {
-                if (finished) break;
-                if (this.interruptNext) break;
+                if (finished || this.interruptNext)
+                {
+                    abortController.abort();
+                    break;
+                };
 
                 // refresh timeout
                 if (timeout)
@@ -194,7 +220,8 @@ class LargeLanguageModelOpenai implements LargeLanguageModel {
         });
     }
 
-    async Interrupt(this: LargeLanguageModel) {
+    async Interrupt()
+    {
         this.interruptNext = true;
     }
 }

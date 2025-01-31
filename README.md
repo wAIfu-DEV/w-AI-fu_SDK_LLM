@@ -22,19 +22,19 @@ Python venvs everywhere.
 
 ### Input (from client application)
 Load provider:
-```json
+```js
 {
     "type": "load",
     "unique_request_id": "<id unique to request>",
-    "provider": "openai" | "groq" | "novelai" | ...,
-    "api_key": "<api key>" (optional, useful for API llms),
-    "preload_model_id": "<model id>" (optional, useful for local llms)
+    "provider": "openai", // "groq" | "novelai" | ...,
+    "api_key": "<api key>", // (optional, useful for API llms),
+    "preload_model_id": "<model id>" // (optional, useful for local llms)
 }
 ```
 Important: the load message may require a "api_key" field or other fields depending on the needs of the implementation.
 
 Generate:
-```json
+```js
 {
     "type": "generate",
     "unique_request_id": "<id unique to request>",
@@ -46,7 +46,7 @@ Generate:
         {
             "role": "user",
             "content": "erm",
-            "name": "DEV" | null
+            "name": "DEV" // or null
         }
     ],
     "params": {
@@ -54,15 +54,16 @@ Generate:
         "character_name": "Mia",
         "temperature": 1.0,
         "max_output_length": 200,
-        "stop_tokens": ["\r", "\n"],
-        "timeout_ms": 10000 | null
+        "stop_tokens": ["\r", "\n"], // or null
+        "timeout_ms": 10000 // or null
+        // In stream mode, timeout is refreshed at every new chunk received
     },
     "stream": false
 }
 ```
 
 Interrupt:
-```json
+```js
 {
     "type": "interrupt",
     "unique_request_id": "<id unique to request>",
@@ -70,7 +71,7 @@ Interrupt:
 ```
 
 Close module:
-```json
+```js
 {
     "type": "close",
     "unique_request_id": "<id unique to request>",
@@ -78,7 +79,7 @@ Close module:
 ```
 
 Get available providers:
-```json
+```js
 {
     "type": "get_providers",
     "unique_request_id": "<id unique to request>",
@@ -86,7 +87,7 @@ Get available providers:
 ```
 
 Get available models from provider:
-```json
+```js
 {
     "type": "get_models",
     "unique_request_id": "<id unique to request>",
@@ -96,27 +97,27 @@ This can only be done after a provider has already been loaded.
 ---
 ### Output (from LLM module)
 Provider load acknowledgment:
-```json
+```js
 {
     "type": "load_ack",
     "unique_request_id": "<id of initial request>",
-    "provider": "openai" | "groq" | "novelai" | ...
+    "provider": "openai" // "groq" | "novelai" | ...
 }
 ```
 
 Provider load done:
-```json
+```js
 {
     "type": "load_done",
     "unique_request_id": "<id of initial request>",
-    "provider": "openai" | "groq" | "novelai" | ...,
-    "is_error": true | false,
-    "error": "SUCCESS" | "<error type>"
+    "provider": "openai" // "groq" | "novelai" | ...,
+    "is_error": false,
+    "error": "SUCCESS" // or "<error type>" if is_error is true
 }
 ```
 
 Generate acknowledgment:
-```json
+```js
 {
     "type": "generate_ack",
     "unique_request_id": "<id of initial request>"
@@ -124,37 +125,37 @@ Generate acknowledgment:
 ```
 
 Generate response:
-```json
+```js
 {
     "type": "generate_done",
     "unique_request_id": "<id of initial request>",
-    "is_error": false | true,
-    "error": "SUCCESS" | "<error type>",
-    "response": "llm response" | null
+    "is_error": false,
+    "error": "SUCCESS", // or "<error type>" if is_error is true
+    "response": "llm response" // or "" if is_error is true
 }
 ```
 
 Generate stream chunk:
-```json
+```js
 {
     "type": "generate_stream_chunk",
     "unique_request_id": "<id of initial request>",
-    "chunk": "<streamed chunk>"
+    "chunk": "<chunk of response>"
 }
 ```
 
 Generate stream done:
-```json
+```js
 {
     "type": "generate_stream_done",
     "unique_request_id": "<id of initial request>",
-    "is_error": false | true,
-    "error": "SUCCESS" | "<error type>"
+    "is_error": false,
+    "error": "SUCCESS", // or "<error type>" if is_error is true
 }
 ```
 
 Interrupt acknowledgment:
-```json
+```js
 {
     "type": "interrupt_ack",
     "unique_request_id": "<id of initial request>",
@@ -162,7 +163,7 @@ Interrupt acknowledgment:
 ```
 
 Close acknowledgment:
-```json
+```js
 {
     "type": "close_ack",
     "unique_request_id": "<id of initial request>",
@@ -175,6 +176,57 @@ Python 3.10 (if required by LLM implementation)
 
 ## Client Example
 A client example is available in the example_client.ts file.
+
+```typescript
+// from example_client.ts
+let client = new wAIfuLlmClient();
+
+let apiKey = await stdinReader.question("[INPUT] OpenAI API Key: ");
+
+await client.loadProvider("openai", {
+    api_key: apiKey
+});
+
+console.log("[INP] User: What is 9 + 10 equal to?");
+
+let response = await client.generate([
+    {
+        role: "user",
+        content: "What is 9 + 10 equal to?"
+    }
+], {
+    model_id: "gpt-4o-mini",
+    character_name: "AI",
+    max_output_length: 250,
+    temperature: 0.7,
+    stop_tokens: ["\n"],
+    timeout_ms: 5_000,
+});
+
+console.log("[OUT] AI:", response);
+
+console.log("[INP] User: Write me a very long story, as long as possible.");
+process.stdout.write("[OUT] AI: ");
+
+await client.generateStream([
+    {
+        role: "user",
+        content: "Write me a very long story, as long as possible."
+    }
+], {
+    model_id: "gpt-4o-mini",
+    character_name: "AI",
+    max_output_length: 750,
+    temperature: 1.3,
+    timeout_ms: 5_000,
+}, (chunk: string) => {
+    process.stdout.write(chunk);
+});
+// generateStream exits after last chunk is received
+
+process.stdout.write("\n");
+console.log("[LOG] Done.");
+```
 
 ## TODO
 - [x] LLM Interface definition

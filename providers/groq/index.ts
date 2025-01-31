@@ -51,11 +51,14 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
             let finished: boolean = false;
             let timeout: NodeJS.Timeout | undefined = undefined;
 
+            let abortController = new AbortController();
+
             if (params.timeout_ms)
             {
                 setTimeout(() => {
                     if (finished) return;
                     finished = true;
+                    abortController.abort();
                     console.error("[ERROR] Generate timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve({
                         error: LLM_GEN_ERR.TIMEOUT,
@@ -73,10 +76,13 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                     max_completion_tokens: params.max_output_length,
                     stop: params.stop_tokens as string[] | undefined,
                     stream: false,
+                }, {
+                    signal: abortController.signal
                 });
             }
             catch (e)
             {
+                if (finished) return;
                 finished = true;
                 console.error("[ERROR] Unexpected Generate error.");
                 console.error("[ERROR] Error:", e);
@@ -121,11 +127,14 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
             let finished: boolean = false;
             let timeout: NodeJS.Timeout | undefined = undefined;
 
+            let abortController: AbortController | undefined = undefined;
+
             if (params.timeout_ms)
             {
                 timeout = setTimeout(() => {
                     if (finished) return;
                     finished = true;
+                    if (abortController) abortController.abort();
                     console.error("[ERROR] GenerateStream timeout, request took longer than", params.timeout_ms, "ms.");
                     resolve(LLM_GEN_ERR.TIMEOUT);
                 }, params.timeout_ms)
@@ -143,6 +152,7 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
             }
             catch(e)
             {
+                if (finished) return;
                 finished = true;
                 console.error("[ERROR] Unexpected GenerateStream error.");
                 console.error("[ERROR] Error:", e);
@@ -150,9 +160,14 @@ class LargeLanguageModelGroq implements LargeLanguageModel {
                 return;
             }
 
+            abortController = stream.controller;
+
             for await (let chunk of stream) {
-                if (finished) break;
-                if (this.interruptNext) break;
+                if (finished || this.interruptNext)
+                {
+                    abortController.abort();
+                    break;
+                }
 
                 // refresh timeout
                 if (timeout)
