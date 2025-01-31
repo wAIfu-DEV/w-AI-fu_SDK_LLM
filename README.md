@@ -147,6 +147,7 @@ Get available models from provider:
 }
 ```
 This can only be done after a provider has already been loaded.
+  
 ---
 ### Output (from LLM module)
 Provider load acknowledgment:
