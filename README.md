@@ -91,6 +91,10 @@ Load provider:
 ```
 Important: the load message may require a "api_key" field or other fields depending on the needs of the implementation.
 
+load
+1. load_ack
+2. load_done
+
 Generate:
 ```js
 {
@@ -120,6 +124,15 @@ Generate:
 }
 ```
 
+generate (stream:false)
+1. generate_ack
+2. generate_done
+
+generate (stream:true)
+1. generate_ack
+2. generate_stream_chunk (x amount of chunks)
+3. generate_stream_done
+
 Interrupt:
 ```js
 {
@@ -127,6 +140,9 @@ Interrupt:
     "unique_request_id": "<id unique to request>",
 }
 ```
+
+interrupt
+1. interrupt_ack
 
 Close module:
 ```js
@@ -136,6 +152,9 @@ Close module:
 }
 ```
 
+close
+1. close_ack
+
 Get available providers:
 ```js
 {
@@ -143,6 +162,9 @@ Get available providers:
     "unique_request_id": "<id unique to request>",
 }
 ```
+
+get_providers
+1. get_providers_done
 
 Get available models from provider:
 ```js
@@ -152,7 +174,10 @@ Get available models from provider:
 }
 ```
 This can only be done after a provider has already been loaded.
-  
+
+get_models
+1. get_models_done
+
 ---
 ### Output (from LLM module)
 Output message types:
