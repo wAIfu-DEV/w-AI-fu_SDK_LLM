@@ -74,6 +74,11 @@ console.log("[LOG] Done.");
 
 ## WebSocket API
 ### Input (from client application)
+Input message types:
+```js
+["load", "generate", "interrupt", "close", "get_providers", "get_models"]
+```
+
 Load provider:
 ```js
 {
@@ -150,6 +155,11 @@ This can only be done after a provider has already been loaded.
   
 ---
 ### Output (from LLM module)
+Output message types:
+```js
+["load_ack", "generate_ack", "interrupt_ack", "close_ack", "load_done", "generate_done", "generate_streamed", "generate_stream_done", "generate_stream_chunk", "get_providers_done", "get_models_done"]
+```
+
 Provider load acknowledgment:
 ```js
 {

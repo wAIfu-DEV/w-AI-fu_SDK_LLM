@@ -12,24 +12,11 @@ export enum LLM_GEN_ERR {
     INTERRUPT = "INTERRUPT",
 };
 
-type MessageInType = "load"
-                     | "generate"
-                     | "interrupt"
-                     | "close"
-                     | "get_providers"
-                     | "get_models";
+let MessageInTypeList = ["load", "generate", "interrupt", "close", "get_providers", "get_models"] as const;
+type MessageInType = typeof MessageInTypeList[number];
 
-export type MessageOutType = "load_ack"
-                      | "generate_ack"
-                      | "interrupt_ack"
-                      | "close_ack"
-                      | "load_done"
-                      | "generate_done"
-                      | "generate_streamed"
-                      | "generate_stream_done"
-                      | "generate_stream_chunk"
-                      | "get_providers_done"
-                      | "get_models_done"
+let MessageOutTypeList = ["load_ack", "generate_ack", "interrupt_ack", "close_ack", "load_done", "generate_done", "generate_streamed", "generate_stream_done", "generate_stream_chunk", "get_providers_done", "get_models_done"] as const;
+type MessageOutType = typeof MessageOutTypeList[number];
 
 let LlmProviderList = ["openai", "novelai", "groq"] as const;
 type LlmProviderListType = typeof LlmProviderList & string[];
