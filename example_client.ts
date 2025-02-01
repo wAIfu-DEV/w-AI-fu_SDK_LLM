@@ -547,7 +547,6 @@ async function main(): Promise<void>
         stop_tokens: null,
         timeout_ms: null,
     });
-
     console.log("[OUT] AI:", response);
 
     console.log("[INP] User: Write me a very long story, as long as possible.");
@@ -570,7 +569,6 @@ async function main(): Promise<void>
     });
 
     process.stdout.write("\n");
-
     console.log("[LOG] Done.");
 }
 

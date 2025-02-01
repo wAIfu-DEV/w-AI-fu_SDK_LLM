@@ -33,7 +33,7 @@ export async function LoadProvider(modelProvider: string, loadRequest: any): Pro
 
     if (tempModel.Model == undefined)
     {
-        console.error("[ERROR] Index file of provider", modelProvider, "does not export a field \"llm\" adhering to the LargeLanguageModel interface.");
+        console.error("[ERROR] Index file of provider", modelProvider, "does not export a field \"Model\" adhering to the LargeLanguageModel interface.");
         return LLM_GEN_ERR.UNEXPECTED;
     }
 
@@ -46,6 +46,7 @@ export async function LoadProvider(modelProvider: string, loadRequest: any): Pro
     if (state.largeLanguageModel != undefined)
     {
         await state.largeLanguageModel.Free();
+        delete require.cache[state.requirePath ?? ""];
     }
 
     state.largeLanguageModel = tempModel.Model as LargeLanguageModel;

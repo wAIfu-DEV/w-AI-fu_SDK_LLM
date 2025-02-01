@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as fs from "fs/promises"
 import { InstallNpmRequirements } from "./install_npm_req";
+import { state } from "./global_state";
 
 
 export async function LoadLlmScript(dirPath: string, llmName: string): Promise<any | undefined>
@@ -55,5 +56,6 @@ export async function LoadLlmScript(dirPath: string, llmName: string): Promise<a
         return undefined;
     }
 
+    state.requirePath = indexPath
     return require(indexPath);
 }

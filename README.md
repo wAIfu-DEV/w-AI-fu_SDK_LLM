@@ -26,34 +26,37 @@ A client example is available in the example_client.ts file.
 let client = new wAIfuLlmClient();
 
 let providers = await client.getProviders();
-
 console.log("[LOG] Available providers:", providers);
 
-let provider = await stdinReader.question("[INPUT] Provider: ");
+let stdinReader = readline.createInterface(process.stdin, process.stdout);
+let provider = (await stdinReader.question("[INPUT] Provider: ")) as LlmProviderName;
 let apiKey = await stdinReader.question("[INPUT] API Key: ");
 
 await client.loadProvider(provider, {
     api_key: apiKey
 });
 
-console.log("[INP] User: What is 9 + 10 equal to?");
+let models = await client.getModels();
+console.log("[LOG] Available models:", models);
+let model = await stdinReader.question("[INPUT] Model ID: ");
+
+console.log("[INP] User: How are you feeling?");
 
 let response = await client.generate([
     {
         role: "user",
-        content: "What is 9 + 10 equal to?"
+        content: "How are you feeling?"
     }
 ], {
-    model_id: "gpt-4o-mini",
+    model_id: model,
     character_name: "AI",
     max_output_length: 250,
-    temperature: 0.7,
-    stop_tokens: ["\n"],
-    timeout_ms: 5_000,
+    temperature: 1.0,
+    stop_tokens: null,
+    timeout_ms: null,
 });
 
 console.log("[OUT] AI:", response);
-
 console.log("[INP] User: Write me a very long story, as long as possible.");
 process.stdout.write("[OUT] AI: ");
 
@@ -63,15 +66,15 @@ await client.generateStream([
         content: "Write me a very long story, as long as possible."
     }
 ], {
-    model_id: "gpt-4o-mini",
+    model_id: model,
     character_name: "AI",
-    max_output_length: 750,
-    temperature: 1.3,
-    timeout_ms: 5_000,
+    max_output_length: 500,
+    temperature: 1.0,
+    stop_tokens: null,
+    timeout_ms: 15_000,
 }, (chunk: string) => {
     process.stdout.write(chunk);
 });
-// generateStream exits after last chunk is received
 
 process.stdout.write("\n");
 console.log("[LOG] Done.");

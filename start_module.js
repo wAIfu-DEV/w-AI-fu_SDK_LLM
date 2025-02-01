@@ -19,7 +19,7 @@ if (maybePort)
     }
 }
 
-let res = cproc.execSync("npx tsx index.ts 7562", {
+let res = cproc.execSync(`npx tsx index.ts ${port}`, {
     cwd: __dirname,
     stdio: [ process.stdin, process.stdout, process.stderr ],
 });
