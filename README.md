@@ -26,21 +26,12 @@ A client example is available in the example_client.ts file.
 let client = new wAIfuLlmClient();
 
 let providers = await client.getProviders();
-console.log("[LOG] Available providers:", providers);
-
-let stdinReader = readline.createInterface(process.stdin, process.stdout);
-let provider = (await stdinReader.question("[INPUT] Provider: ")) as LlmProviderName;
-let apiKey = await stdinReader.question("[INPUT] API Key: ");
 
 await client.loadProvider(provider, {
     api_key: apiKey
 });
 
 let models = await client.getModels();
-console.log("[LOG] Available models:", models);
-let model = await stdinReader.question("[INPUT] Model ID: ");
-
-console.log("[INP] User: How are you feeling?");
 
 let response = await client.generate([
     {
@@ -56,10 +47,6 @@ let response = await client.generate([
     timeout_ms: null,
 });
 
-console.log("[OUT] AI:", response);
-console.log("[INP] User: Write me a very long story, as long as possible.");
-process.stdout.write("[OUT] AI: ");
-
 await client.generateStream([
     {
         role: "user",
@@ -73,11 +60,8 @@ await client.generateStream([
     stop_tokens: null,
     timeout_ms: 15_000,
 }, (chunk: string) => {
-    process.stdout.write(chunk);
+    console.log(chunk);
 });
-
-process.stdout.write("\n");
-console.log("[LOG] Done.");
 ```
 
 ## WebSocket API
